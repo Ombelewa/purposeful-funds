@@ -4,9 +4,19 @@ import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { ActiveAlerts } from "@/components/dashboard/ActiveAlerts";
 import { FundAllocationCard } from "@/components/dashboard/FundAllocationCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { Wallet, ArrowRightLeft, AlertTriangle, ShieldCheck, TrendingUp } from "lucide-react";
+import { Wallet, ArrowRightLeft, AlertTriangle, ShieldCheck } from "lucide-react";
+import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 
 const Index = () => {
+  const { data: stats, isLoading } = useDashboardStats();
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `N$${(amount / 1000000).toFixed(1)}M`;
+    }
+    return `N$${amount.toLocaleString()}`;
+  };
+
   return (
     <DashboardLayout 
       title="Dashboard" 
@@ -22,31 +32,31 @@ const Index = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <StatCard
           title="Total Allocated Funds"
-          value="N$9.3M"
-          subtitle="Across 12 active allocations"
+          value={isLoading ? "Loading..." : formatCurrency(stats?.totalAllocated || 0)}
+          subtitle={`Across ${stats?.totalAllocations || 0} active allocations`}
           icon={<Wallet className="h-5 w-5" />}
           trend={{ value: 12, label: "from last month" }}
           variant="accent"
         />
         <StatCard
           title="Today's Transactions"
-          value="47"
-          subtitle="N$523,450 processed"
+          value={isLoading ? "Loading..." : String(stats?.todayTransactions || 0)}
+          subtitle={isLoading ? "" : `${formatCurrency(stats?.todayAmount || 0)} processed`}
           icon={<ArrowRightLeft className="h-5 w-5" />}
           trend={{ value: 8, label: "from yesterday" }}
         />
         <StatCard
           title="Active Alerts"
-          value="5"
-          subtitle="2 critical, 2 high priority"
+          value={isLoading ? "Loading..." : String(stats?.activeAlerts || 0)}
+          subtitle={isLoading ? "" : `${stats?.criticalAlerts || 0} critical, ${stats?.highAlerts || 0} high priority`}
           icon={<AlertTriangle className="h-5 w-5" />}
           trend={{ value: -15, label: "from last week" }}
           variant="destructive"
         />
         <StatCard
           title="Blocked Transactions"
-          value="3"
-          subtitle="N$188,000 prevented"
+          value={isLoading ? "Loading..." : String(stats?.blockedTransactions || 0)}
+          subtitle={isLoading ? "" : `${formatCurrency(stats?.blockedAmount || 0)} prevented`}
           icon={<ShieldCheck className="h-5 w-5" />}
           trend={{ value: 0, label: "this week" }}
           variant="warning"

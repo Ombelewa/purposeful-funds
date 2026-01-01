@@ -11,7 +11,9 @@ import {
   Shield,
   LogOut
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAlerts } from "@/hooks/use-alerts";
 
 interface NavItem {
   icon: React.ElementType;
@@ -45,6 +47,10 @@ interface SidebarProps {
 }
 
 export function Sidebar({ currentPath = "/" }: SidebarProps) {
+  const { data: alerts } = useAlerts();
+  const activeAlertsCount = alerts?.filter(a => a.status === "open" || a.status === "investigating").length || 0;
+  const criticalAlertsCount = alerts?.filter(a => a.severity === "critical").length || 0;
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
@@ -66,30 +72,33 @@ export function Sidebar({ currentPath = "/" }: SidebarProps) {
             Overview
           </p>
           <ul className="space-y-1">
-            {mainNavItems.map((item) => (
-              <li key={item.href}>
-                <a
-                  href={item.href}
-                  className={cn(
-                    "nav-link",
-                    currentPath === item.href && "active"
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badge && (
-                    <span className={cn(
-                      "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
-                      item.badgeVariant === "critical" && "bg-destructive text-destructive-foreground",
-                      item.badgeVariant === "warning" && "bg-warning text-warning-foreground",
-                      !item.badgeVariant && "bg-sidebar-accent text-sidebar-foreground"
-                    )}>
-                      {item.badge}
-                    </span>
-                  )}
-                </a>
-              </li>
-            ))}
+            {mainNavItems.map((item) => {
+              const badgeCount = item.href === "/alerts" ? (criticalAlertsCount > 0 ? criticalAlertsCount : activeAlertsCount) : item.badge;
+              return (
+                <li key={item.href}>
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "nav-link",
+                      currentPath === item.href && "active"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="flex-1">{item.label}</span>
+                    {badgeCount && badgeCount > 0 && (
+                      <span className={cn(
+                        "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
+                        item.badgeVariant === "critical" && "bg-destructive text-destructive-foreground",
+                        item.badgeVariant === "warning" && "bg-warning text-warning-foreground",
+                        !item.badgeVariant && "bg-sidebar-accent text-sidebar-foreground"
+                      )}>
+                        {badgeCount}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
@@ -101,8 +110,8 @@ export function Sidebar({ currentPath = "/" }: SidebarProps) {
           <ul className="space-y-1">
             {managementNavItems.map((item) => (
               <li key={item.href}>
-                <a
-                  href={item.href}
+                <Link
+                  to={item.href}
                   className={cn(
                     "nav-link",
                     currentPath === item.href && "active"
@@ -110,7 +119,7 @@ export function Sidebar({ currentPath = "/" }: SidebarProps) {
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -124,8 +133,8 @@ export function Sidebar({ currentPath = "/" }: SidebarProps) {
           <ul className="space-y-1">
             {systemNavItems.map((item) => (
               <li key={item.href}>
-                <a
-                  href={item.href}
+                <Link
+                  to={item.href}
                   className={cn(
                     "nav-link",
                     currentPath === item.href && "active"
@@ -133,7 +142,7 @@ export function Sidebar({ currentPath = "/" }: SidebarProps) {
                 >
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
