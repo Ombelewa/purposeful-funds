@@ -1,10 +1,28 @@
 import { Wallet, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAllocations } from "@/hooks/use-allocations";
+import { useFundAllocations } from "@/hooks/use-fund-allocations";
+import { useSpendingCategories } from "@/hooks/use-spending-categories";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 export function FundAllocationCard() {
-  const { data: allocations, isLoading } = useAllocations();
+  const { data: allocations, isLoading } = useFundAllocations();
+  const { data: categories } = useSpendingCategories();
+
+  const getCategoryName = (categoryId: string) => {
+    return categories?.find((c) => c.id === categoryId)?.name || "Unknown";
+  };
+
+  const getUsagePercent = (amount: number, remaining: number) => {
+    if (amount === 0) return 0;
+    return ((amount - remaining) / amount) * 100;
+  };
+
+  const getStatus = (percent: number) => {
+    if (percent >= 95) return "critical";
+    if (percent >= 80) return "warning";
+    return "active";
+  };
 
   if (isLoading) {
     return (
@@ -48,32 +66,41 @@ export function FundAllocationCard() {
             <p className="text-sm text-muted-foreground">Active budget wallets</p>
           </div>
         </div>
-        <button className="text-sm font-medium text-accent hover:text-accent/80 transition-colors flex items-center gap-1">
+        <Link 
+          to="/allocations"
+          className="text-sm font-medium text-accent hover:text-accent/80 transition-colors flex items-center gap-1"
+        >
           Manage <ArrowRight className="h-4 w-4" />
-        </button>
+        </Link>
       </div>
 
       <div className="divide-y divide-border">
         {allocations && allocations.length > 0 ? (
-          allocations.map((allocation) => {
-            const percentUsed = (allocation.spent / allocation.totalBudget) * 100;
+          allocations.slice(0, 3).map((allocation) => {
+            const percentUsed = getUsagePercent(allocation.amount, allocation.remaining_amount);
+            const status = getStatus(percentUsed);
+            const spent = allocation.amount - allocation.remaining_amount;
             
             return (
               <div key={allocation.id} className="p-4 hover:bg-muted/30 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="font-medium text-foreground">{allocation.name}</p>
-                    <p className="text-sm text-muted-foreground">{allocation.department}</p>
+                    <p className="font-medium text-foreground">
+                      {allocation.organization?.name || "Unknown Organization"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {allocation.department?.name || allocation.source}
+                    </p>
                   </div>
                   <span className={cn(
                     "text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-full",
-                    allocation.status === "active" && "bg-success/10 text-success",
-                    allocation.status === "warning" && "bg-warning/10 text-warning",
-                    allocation.status === "critical" && "bg-destructive/10 text-destructive"
+                    status === "active" && "bg-success/10 text-success",
+                    status === "warning" && "bg-warning/10 text-warning",
+                    status === "critical" && "bg-destructive/10 text-destructive"
                   )}>
-                    {allocation.status === "active" && "Healthy"}
-                    {allocation.status === "warning" && "Low Balance"}
-                    {allocation.status === "critical" && "Near Limit"}
+                    {status === "active" && "Healthy"}
+                    {status === "warning" && "Low Balance"}
+                    {status === "critical" && "Near Limit"}
                   </span>
                 </div>
 
@@ -81,7 +108,7 @@ export function FundAllocationCard() {
                 <div className="mb-3">
                   <div className="flex justify-between text-xs mb-1.5">
                     <span className="text-muted-foreground">
-                      N${allocation.spent.toLocaleString()} spent
+                      N${spent.toLocaleString()} spent
                     </span>
                     <span className="font-medium text-foreground">
                       {percentUsed.toFixed(0)}%
@@ -91,11 +118,11 @@ export function FundAllocationCard() {
                     <div 
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        allocation.status === "active" && "bg-success",
-                        allocation.status === "warning" && "bg-warning",
-                        allocation.status === "critical" && "bg-destructive"
+                        status === "active" && "bg-success",
+                        status === "warning" && "bg-warning",
+                        status === "critical" && "bg-destructive"
                       )}
-                      style={{ width: `${percentUsed}%` }}
+                      style={{ width: `${Math.min(percentUsed, 100)}%` }}
                     />
                   </div>
                 </div>
@@ -105,21 +132,21 @@ export function FundAllocationCard() {
                   <div>
                     <span className="text-muted-foreground">Remaining: </span>
                     <span className="font-mono font-semibold text-foreground">
-                      N${allocation.remaining.toLocaleString()}
+                      N${allocation.remaining_amount.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    {allocation.allowedCategories.slice(0, 2).map((cat) => (
+                    {allocation.allowed_categories.slice(0, 2).map((catId) => (
                       <span 
-                        key={cat} 
+                        key={catId} 
                         className="text-xs bg-secondary px-2 py-0.5 rounded text-secondary-foreground"
                       >
-                        {cat}
+                        {getCategoryName(catId)}
                       </span>
                     ))}
-                    {allocation.allowedCategories.length > 2 && (
+                    {allocation.allowed_categories.length > 2 && (
                       <span className="text-xs bg-secondary px-2 py-0.5 rounded text-secondary-foreground">
-                        +{allocation.allowedCategories.length - 2}
+                        +{allocation.allowed_categories.length - 2}
                       </span>
                     )}
                   </div>
@@ -128,7 +155,13 @@ export function FundAllocationCard() {
             );
           })
         ) : (
-          <div className="p-8 text-center text-muted-foreground">No allocations found</div>
+          <div className="p-8 text-center text-muted-foreground">
+            <Wallet className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No allocations yet</p>
+            <Link to="/allocations" className="text-accent text-sm hover:underline">
+              Create your first allocation
+            </Link>
+          </div>
         )}
       </div>
     </div>
